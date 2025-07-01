@@ -19,9 +19,7 @@
 
 This project aims to provide reliable simulation tools to:
 
-- Calculate surface energies accurately.
-- Simulate crack tip behavior under various theoretical models (screening, blunting).
-- Analyze the temperature-dependent loading of stress intensity factors (K) in crack systems.
+- Analyze the brittle-to-ductile transition in BCC. 
 - Facilitate better understanding of fracture mechanics at the atomic scale through LAMMPS simulations.
 
 ## Notes
@@ -29,11 +27,9 @@ This project aims to provide reliable simulation tools to:
 - All simulations are implemented using **LAMMPS**.
 - Post-processing and analysis are done with **Python** scripts.
 - Data formats include `.in` for LAMMPS input, `.dump` and `.log` files for outputs.
-- Theoretical background follows isotropic elasticity fracture mechanics principles.
 
 ## Contact
 
 For questions, feedback, or contributions, please reach out to:
 
 - GitHub: [jyzhang](https://github.com/oWoo01)  
-- Email: jyzhang@example.com
