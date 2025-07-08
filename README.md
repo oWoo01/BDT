@@ -15,6 +15,9 @@
 - `load_idx_K_T`  
   Scripts and data for loading and analyzing K values in different crack systems at finite temperature.
 
+- `DDplot`
+  Compute the Differential Displacement vector for analyzing dislocation core structure
+
 ## Goal
 
 This project aims to provide reliable simulation tools to:

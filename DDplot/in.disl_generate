@@ -1,0 +1,47 @@
+units           metal
+boundary        p p p
+atom_style      atomic
+
+variable    lc equal 3.1472
+variable    burgers equal ${lc}*sqrt(3)/2
+
+read_data 	Mo_perf.lmp
+
+pair_style 	eam/alloy
+# pair_coeff 	* * ../p_func/mo.fs.eam.alloy Mo 
+pair_coeff 	* * ../p_func/Mo_Zhou04.eam.alloy Mo 
+
+thermo 		10
+thermo_style 	custom step temp etotal press vol
+
+dump        1 all cfg 500 Mo*.cfg mass type xs ys zs
+dump_modify 1 element Mo sort id
+
+minimize    1e-20 1e-20 100000 100000
+
+variable 	z0 equal (zlo+zhi)/2  
+variable 	y0 equal (ylo+yhi)/2  
+variable    x0 equal (xlo+xhi)/2
+variable    z1 equal zlo+5
+variable    z2 equal zhi-5
+
+region      lo plane ${x0} ${y0} ${z1} 0 0 -1 units box
+region      hi plane ${x0} ${y0} ${z2} 0 0 1 units box
+group       hi region hi
+group       lo region lo
+group       bd union lo hi
+
+compute     pos all property/atom x y
+variable    dx atom c_pos[1]-${x0}
+variable    dy atom c_pos[2]-${y0}
+variable    r atom sqrt(v_dx^2+v_dy^2)
+variable    theta atom atan2(v_dy,v_dx)
+variable    uz atom v_theta*${burgers}/2/PI
+run         0
+
+displace_atoms      all move 0.0 0.0 v_uz units box
+
+# fix         1 bd setforce 0.0 0.0 0.0
+
+minimize 	1e-20 1e-20 100000 100000
+
