@@ -5,7 +5,7 @@ Old lattice:
 Number of atoms in old unit cell:
 1
 symbol          s0              s1              s2
-Mo              0.              0.              0.
+W              0.              0.              0.
 
 New origin:
 0.      0.      0.
@@ -15,6 +15,6 @@ New lattice:
 1     1     1
 
 View with multiplicities and lattice constant [A]:
-30      50      4      3.1472 
+30      50      4      3.165 
 Save configuration on file (default=/tmp/config):
-Mo_perf.cfg
+W-perf.cfg

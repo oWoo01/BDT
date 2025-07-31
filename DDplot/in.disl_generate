@@ -2,20 +2,33 @@ units           metal
 boundary        p p p
 atom_style      atomic
 
-variable    lc equal 3.1472
 variable    burgers equal ${lc}*sqrt(3)/2
+variable    datafile string "/home/jyzhang/lammps/BDT/DDplot/potentials/${elem}/${elem}-perf.lmp" 
 
-read_data 	Mo_perf.lmp
+read_data 	${datafile}
 
-pair_style 	eam/alloy
-# pair_coeff 	* * ../p_func/mo.fs.eam.alloy Mo 
-pair_coeff 	* * ../p_func/Mo_Zhou04.eam.alloy Mo 
+pair_style  ${type}
+if "${type} == meam" then &
+    "pair_coeff * * ${file1} ${elem} ${file2} ${elem}" &
+else  &
+    "pair_coeff * * ${file} ${elem}"
 
-thermo 		10
+thermo 		100
 thermo_style 	custom step temp etotal press vol
 
-dump        1 all cfg 500 Mo*.cfg mass type xs ys zs
-dump_modify 1 element Mo sort id
+fix         1 all box/relax iso 0.0
+minimize    1e-15 1e-15 100000 100000 
+
+unfix       1
+minimize    1e-15 1e-15 100000 100000
+
+fix         1 all box/relax iso 0.0
+minimize    1e-15 1e-15 100000 100000 
+
+unfix       1
+
+dump        1 all cfg 500 ${elem}*.cfg mass type xs ys zs
+dump_modify 1 element ${elem} sort id
 
 minimize    1e-20 1e-20 100000 100000
 
