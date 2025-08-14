@@ -1,0 +1,82 @@
+# LAMMPS input script for BCC W to create semi-infinite crack
+# input variance: temperature T, crack system index idx
+units 		metal
+atom_style	atomic
+dimension	3
+boundary	p p p  
+
+read_data 	input/W_${idx}.lmp extra/atom/types 3
+# read_data	config/static/W_${idx}_ini.data
+
+pair_style 	eam/alloy
+pair_coeff 	* * ${potential}/p_func/${p_name} W W W W 
+
+minimize	1e-15 1e-15 100000 100000
+
+fix		1 all box/relax aniso 0.0
+minimize	1e-15 1e-15 100000 100000
+
+unfix		1
+minimize	1e-15 1e-15 100000 100000
+
+fix		1 all box/relax aniso 0.0
+minimize	1e-15 1e-15 100000 100000
+
+unfix		1
+minimize	1e-15 1e-15 100000 100000
+
+# ------------ create a crack ------------
+variable 	z0 equal (zlo+zhi)/2  
+variable 	y0 equal (ylo+yhi)/2  # crack tip locates at (~, y0, z0)
+
+region      upper block INF INF INF ${y0} ${z0} INF
+region      lower block INF INF INF ${y0} INF ${z0}
+group 		upper region upper    # z>z0,y<y0
+group 		lower region lower    # z<z0,y<y0
+
+set         group upper type 2
+set         group lower type 3
+neigh_modify 	exclude group upper lower   # delete the interaction between free surface 
+
+minimize	1e-15 1e-15 100000 100000
+# ------------ set boundary ------------
+variable    hb equal 12
+variable    y1 equal ylo+${hb}
+variable    y2 equal yhi-${hb}
+variable    z1 equal zlo+${hb}
+variable    z2 equal zhi-${hb}
+
+region      blf plane 0 ${y1} 0 0 -1 0 units box
+region      brt plane 0 ${y2} 0 0 1 0 units box
+region      bhi plane 0 0 ${z1} 0 0 -1 units box
+region      blo plane 0 0 ${z2} 0 0 1 units box
+region      bd union 4 blf brt bhi blo
+
+group       bd region bd 
+group       mobile subtract all bd
+set         group bd type 4
+
+change_box  all y delta -40 40 z delta -40 40 units box	# vaccum layer 
+minimize	1e-15 1e-15 100000 100000
+
+write_data	${potential}/config/static/W_${idx}_ini.data
+
+# ------------ relax at finite temperature --------------
+thermo		100
+
+# group       bd type 4
+# group       mobile subtract all bd
+
+compute     myTemp mobile temp
+velocity	mobile create $T 51319 rot yes dist gaussian
+velocity    bd set 0.0 0.0 0.0
+
+fix     bd_f bd setforce 0.0 0.0 0.0
+
+fix     bd_nve bd nve
+fix		mb_npt mobile npt temp $T $T $(100*dt) aniso 0.0 0.0 $(1000*dt)
+fix_modify  mb_npt temp myTemp
+
+run		20000
+# write_data	config/dynamic/W_${idx}_$T.data 
+write_dump  all custom ${potential}/config/dynamic/W_${idx}_$T.data id type mass x y z vx vy vz modify sort id
