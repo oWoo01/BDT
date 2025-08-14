@@ -20,7 +20,7 @@ os.environ['OVITO_GUI_MODE'] = '0'
 def measure_crack_length(input_file):
 
     pipeline = import_file(input_file)
-    modifier1 = ConstructSurfaceModifier(method=ConstructSurfaceModifier.Method.AlphaShape, radius=2.7, smoothing_level=8, select_surface_particles=True)
+    modifier1 = ConstructSurfaceModifier(method=ConstructSurfaceModifier.Method.AlphaShape, radius=2.2, smoothing_level=8, select_surface_particles=True)
     pipeline.modifiers.append(modifier1)
 
     data = pipeline.compute()
@@ -61,7 +61,7 @@ def count_dislocation(input_file):
 
 if __name__ == "__main__":
 
-    potential = 'eam-2013--Marinica-M-C-Ventelon-L-Gilbert-M-R-et-al--W-3'
+    potential = 'eam-2018--Setyawan-W-Gao-N-Kurtz-R-J--W-Re'
     path = f'/work/home/jyzhang/bdt-W/{potential}'
     crack_systems = [i for i in range(1,8)]
     Temp = ['300', '1600']
@@ -107,10 +107,11 @@ if __name__ == "__main__":
                         l = measure_crack_length(datafile)
                         fout.write(f"{step} {K} {l:.5f}\n")
 
-                        if flag_b == 0 and (l - pre_l) > 4:
-                            flag_b = 1
-                            kc = K
-                            event_type = 'cleavage'
+                        if flag_d == 0 and (l - pre_l) > 4:
+                            if flag_b == 0:
+                                flag_b = 1
+                                kc = K
+                                event_type = 'cleavage'
                             print(f"Cleavage detected at K={K}.")
                         elif flag_b == 0 and count_dislocation(datafile) > 0:
                             if flag_d == 0:
