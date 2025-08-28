@@ -1,0 +1,87 @@
+# LAMMPS input script for BCC Mo with semi-infinite crack
+# crack surface: {100} (perpendicular to Z)
+# crack front: [001] (along X)
+
+units 		metal
+atom_style	atomic
+dimension	3
+boundary	p p p  
+
+variable    KI equal 1  # unit: MPa/sqrt(m)
+
+variable    lc equal 3.1472
+variable    mu equal 161.51*1000
+variable    poiss equal 0.3
+variable    dz equal 1
+
+read_data 	config/Mo_ini.lmp extra/atom/types 3
+
+pair_style 	eam/alloy
+pair_coeff 	* * p_func/mo.fs.eam.alloy Mo Mo Mo Mo 
+
+
+# ------------ create a crack ------------
+variable 	z0 equal (zlo+zhi)/2  
+variable 	y0 equal (ylo+yhi)/2  # crack tip locates at (~, y0, z0)
+
+region      upper block INF INF INF ${y0} ${z0} INF
+region      lower block INF INF INF ${y0} INF ${z0}
+group 		upper region upper    # z>z0,y<y0
+group 		lower region lower    # z<z0,y<y0
+
+set         group upper type 2
+set         group lower type 3
+neigh_modify 	exclude group upper lower   # delete the interaction between free surface 
+
+minimize	1e-15 1e-15 100000 100000
+# ------------ set boundary ------------
+variable    hb equal 12
+variable    y1 equal ylo+${hb}
+variable    y2 equal yhi-${hb}
+variable    z1 equal zlo+${hb}
+variable    z2 equal zhi-${hb}
+
+region      blf plane 0 ${y1} 0 0 -1 0 units box
+region      brt plane 0 ${y2} 0 0 1 0 units box
+region      bhi plane 0 0 ${z1} 0 0 -1 units box
+region      blo plane 0 0 ${z2} 0 0 1 units box
+region      bd union 4 blf brt bhi blo
+
+group       bd region bd 
+set         group bd type 4
+
+change_box  all y delta -20 20 z delta -20 20 units box	# vaccum layer 
+minimize	1e-15 1e-15 100000 100000
+# ------------- K test ---------------
+thermo 		100
+thermo_style 	custom step temp etotal press vol
+
+dump        1 all custom 100 dump/crack1.dump id mass type x y z
+dump_modify 1 sort id
+
+variable    Ki equal ${KI}*100000
+variable    pi equal 3.141592653589793
+compute     pos_bd bd property/atom y z
+variable    deltay atom c_pos_bd[1]-${y0}
+variable    deltaz atom c_pos_bd[2]-${z0}
+variable    rbd atom sqrt(v_deltay^2+v_deltaz^2)
+variable    theta atom atan2(v_deltaz,v_deltay)
+
+fix		1 bd setforce NULL NULL 0.0
+
+variable	Ka equal ${Ki}/10 
+variable	a loop 10
+label		loop		# delta_u ~ delta_K
+
+variable    uy atom ${Ka}/${mu}*sqrt(v_rbd/2/${pi})*cos(v_theta/2)*(1-2*${poiss}+sin(v_theta/2)^2)
+variable    uz atom ${Ka}/${mu}*sqrt(v_rbd/2/${pi})*sin(v_theta/2)*(2-2*${poiss}-cos(v_theta/2)^2)
+
+run		0
+
+displace_atoms  bd move 0.0 v_uy v_uz units box
+minimize 	1e-15 1e-15 100000 100000
+
+next		a
+jump		SELF loop
+
+write_data 	config/Mo_crack1.lmp

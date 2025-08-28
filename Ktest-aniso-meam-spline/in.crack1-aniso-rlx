@@ -1,0 +1,49 @@
+# LAMMPS input script for BCC Mo wich crack to relax at finite temperature 
+# input variance: temperature T, crack system index idx, now_step
+units 		metal
+atom_style	atomic
+dimension	3
+boundary	p p p  
+
+fix         groupID all property/atom i_groupID
+read_data 	dump/${idx}/$T/Mo_${idx}_$T_${now_step}.data fix groupID NULL groupID
+
+pair_style 	meam/spline
+pair_coeff 	* * p_func/Park_MEAM_Mo_2012.spline Mo 
+
+mass        * 95.94
+
+# ----------- set groups ------------
+compute     groupID all property/atom i_groupID
+run         0
+variable    mobile atom "c_groupID == 1"
+variable    upper atom "c_groupID == 2"
+variable    lower atom "c_groupID == 3"
+variable    bd atom "c_groupID == 4"
+
+group       upper variable upper
+group       lower variable lower
+group       bd variable bd
+group       mobile variable mobile
+neigh_modify 	exclude group upper lower   # delete the interaction between free surface 
+
+# ------------ relax at finite temperature --------------
+compute     myTemp mobile temp
+
+thermo		1000 
+thermo_style    custom step temp press pzz etotal pe vol 
+thermo_modify   temp myTemp
+
+
+velocity    bd set 0.0 0.0 0.0
+fix		1 bd setforce 0.0 0.0 0.0
+
+fix		bd_nve bd nve
+fix		mb_npt mobile npt temp $T $T $(100*dt) aniso 0.0 0.0 $(1000*dt)
+fix_modify  mb_npt temp myTemp
+
+run		20000
+
+write_data	dump/${idx}/$T/Mo_${idx}_$T_${now_step}_eq.data 
+# write_dump  all custom dump/${idx}/$T/Mo_${idx}_$T_${now_step}_eq.data id type mass x y z vx vy vz modify sort id
+

@@ -14,13 +14,14 @@ from ovito.modifiers import DislocationAnalysisModifier
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import sys
 
 os.environ['OVITO_GUI_MODE'] = '0'
 
 def measure_crack_length(input_file):
 
     pipeline = import_file(input_file)
-    modifier1 = ConstructSurfaceModifier(method=ConstructSurfaceModifier.Method.AlphaShape, radius=2.2, smoothing_level=8, select_surface_particles=True)
+    modifier1 = ConstructSurfaceModifier(method=ConstructSurfaceModifier.Method.AlphaShape, radius=2.7, smoothing_level=8, select_surface_particles=True)
     pipeline.modifiers.append(modifier1)
 
     data = pipeline.compute()
@@ -60,8 +61,8 @@ def count_dislocation(input_file):
     return len(data.dislocations.lines)
 
 if __name__ == "__main__":
-
-    potential = 'eam-2018--Setyawan-W-Gao-N-Kurtz-R-J--W-Re'
+    
+    potential = sys.argv[1]
     path = f'/work/home/jyzhang/bdt-W/{potential}'
     crack_systems = [i for i in range(1,8)]
     Temp = ['300', '1600']
@@ -107,26 +108,22 @@ if __name__ == "__main__":
                         l = measure_crack_length(datafile)
                         fout.write(f"{step} {K} {l:.5f}\n")
 
-                        if flag_d == 0 and (l - pre_l) > 4:
-                            if flag_b == 0:
-                                flag_b = 1
-                                kc = K
-                                event_type = 'cleavage'
-                            print(f"Cleavage detected at K={K}.")
-                        elif flag_b == 0 and count_dislocation(datafile) > 0:
-                            if flag_d == 0:
+                        if flag_d == 0 and flag_b == 0:
+                            if count_dislocation(datafile) > 0:
                                 flag_d = 1
                                 kc = K
                                 event_type = 'disl-emission'
-                            print(f"Dislocation emission detected at K={K}.")
+                                print(f"Dislocation emission detected at K={K}.")
+                            elif (l - pre_l) > 2:
+                                flag_b = 1
+                                kc = K
+                                event_type = 'cleavage'
+                                print(f"Cleavage detected at K={K}.")
 
                     if kc is None:
                         print(f"No critical K found!")
                         kcfout.write(f"{i} {j} - no-event -\n")
-                    elif flag_d == 1:
-                        final_dislocation_count = count_dislocation(datafile)
-                    else:
-                        final_dislocation_count = '-'
+                    final_dislocation_count = count_dislocation(datafile)
                     kcfout.write(f"{i} {j} {kc} {event_type} {final_dislocation_count}\n")
 
                 print(f"Finished processing.")
